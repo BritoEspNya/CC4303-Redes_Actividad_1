@@ -1,15 +1,32 @@
 import socket
+import json
 
 VM_IP = '127.0.0.1'
 PORT = 8000
 
 def parse_HTTP_message(http_message):
     http_split = http_message.split("\r\n\r\n")
-    print(http_split)
-    #http_header = http_split[0]
-    #http_body = http_split[1]
-    #return (http_header, http_body)
-    return None
+
+    http_header = http_split[0]
+    http_content = None
+
+    headers = http_header.split("\r\n")
+    headers_dict = dict()
+    headers_dict["Start-Line"] = headers[0]
+    for header in headers:
+        if ":" in header:
+            split_header = header.split(":")
+            header_name = split_header[0]
+            header_content = split_header[1]
+            headers_dict[header_name] = header_content
+        else: print(header)
+
+    headers_json = json.dumps(headers_dict)
+
+    if len(http_split) > 1:
+        http_content = http_split[1]
+
+    return headers_json, http_content
 
 def create_HTTP_message():
     pass
@@ -55,10 +72,11 @@ while True:
 
     #print(f' -> Se ha recibido el siguiente mensaje: {recv_message}')
 
-    response_message = f"Se ha sido recibido con éxito el mensaje: {recv_message}"
+    response_message = f"Se ha sido recibido con éxito el mensaje"
 
-    print(f'HTTP recibido: {parse_HTTP_message(recv_message)}')
-
+    http_headers_json, http_content = parse_HTTP_message(recv_message)
+    print(http_headers_json)
+    #print(f'HTTP recibido: {parse_HTTP_message(recv_message)}')
 
     new_socket.send(response_message.encode())
 
