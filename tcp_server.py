@@ -29,7 +29,14 @@ def parse_HTTP_message(http_message):
     return headers_json, http_content
 
 def create_HTTP_message():
-    pass
+    status_line = "HTTP/1.1 200 OK\r\n"
+    body = "Hello, World!"
+    headers = f"Content-Type: text/plain; charset=utf-8\r\nContent-Length: {len(body)}\r\n"
+    blank_line = "\r\n"
+    
+    full_response = status_line + headers + blank_line + body
+
+    return full_response
 
 def receive_full_message(connection_socket, buff_size, end_sequence):
     recv_message = connection_socket.recv(buff_size)
@@ -70,15 +77,11 @@ while True:
 
     recv_message = receive_full_message(new_socket, buff_size, end_of_message)
 
-    #print(f' -> Se ha recibido el siguiente mensaje: {recv_message}')
-
-    response_message = f"Se ha sido recibido con éxito el mensaje"
-
     http_headers_json, http_content = parse_HTTP_message(recv_message)
     print(http_headers_json)
-    #print(f'HTTP recibido: {parse_HTTP_message(recv_message)}')
 
-    new_socket.send(response_message.encode())
+    response_message = create_HTTP_message()
+    new_socket.send(response_message.encode('utf-8'))
 
     new_socket.close()
     print(f"conexión con {new_socket_address} ha sido cerrada")
