@@ -15,22 +15,7 @@ proxy_socket_address = (VM_IP, PORT)
 base_dir = os.path.dirname(os.path.abspath(__file__))
 ruta_json = os.path.join(base_dir, "blocked.json")
 ruta_gato = os.path.join(base_dir, "img/forbidden_cat.jpeg")
-"""
-def receive_full_message(connection_socket, recv_buffer, end_sequence):
-    recv_message = connection_socket.recv(recv_buffer)
-    full_message = recv_message
 
-    is_end_of_message = contains_end_of_message(full_message.decode(), end_sequence)
-
-    while not is_end_of_message:
-        recv_message = connection_socket.recv(recv_buffer)
-        full_message += recv_message
-        is_end_of_message = contains_end_of_message(full_message.decode(), end_sequence)
-
-    full_message = remove_end_of_message(full_message.decode(), end_sequence)
-
-    return full_message
-"""
 def receive_full_message(connection_socket, recv_buffer):
     full_header = ""
     full_body = ""
@@ -64,11 +49,6 @@ def receive_full_message(connection_socket, recv_buffer):
         full_message += recv_message
     
     return full_message
-
-def contains_end_of_message(message, end_sequence):
-    return message.endswith(end_sequence)
-
-def remove_end_of_message(full_message, end_sequence):
     index = full_message.rfind(end_sequence)
     return full_message[:index]
 
