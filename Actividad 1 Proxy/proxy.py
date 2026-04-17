@@ -1,28 +1,63 @@
 import socket
 import json
+import base64
 
 VM_IP = '127.0.0.1'
 PORT = 8000
 PORT_SERVER = 80
 
 proxy_name = "Benjas"
-buff_size = 1024
+recv_buffer = 50
 end_of_message = "\n"
 proxy_socket_address = (VM_IP, PORT)
-
-def receive_full_message(connection_socket, buff_size, end_sequence):
-    recv_message = connection_socket.recv(buff_size)
+"""
+def receive_full_message(connection_socket, recv_buffer, end_sequence):
+    recv_message = connection_socket.recv(recv_buffer)
     full_message = recv_message
 
     is_end_of_message = contains_end_of_message(full_message.decode(), end_sequence)
 
     while not is_end_of_message:
-        recv_message = connection_socket.recv(buff_size)
+        recv_message = connection_socket.recv(recv_buffer)
         full_message += recv_message
         is_end_of_message = contains_end_of_message(full_message.decode(), end_sequence)
 
     full_message = remove_end_of_message(full_message.decode(), end_sequence)
 
+    return full_message
+"""
+def receive_full_message(connection_socket, recv_buffer):
+    full_header = ""
+    full_body = ""
+    
+    recv_message = connection_socket.recv(recv_buffer)
+    full_message = recv_message
+
+    # Get headers
+    end_of_header = "\r\n\r\n"
+    while not end_of_header in recv_message.decode():
+        recv_message = connection_socket.recv(recv_buffer)
+        full_message += recv_message
+    split_message = full_message.decode().split(end_of_header)
+    full_header = split_message[0]
+
+    # Get body if available
+    body_length = 0
+    headers = full_header.split("\r\n")
+    for header in headers:
+        if ":" in header:
+            split_header = header.split(":")
+            header_name = split_header[0]
+            header_content = split_header[1]
+            if "Content-Length" in header_name:
+                body_length = int(header_content)
+                full_body = split_message[1].encode()
+                break
+    while len(full_body) < body_length:
+        recv_message = connection_socket.recv(recv_buffer)
+        full_body += recv_message
+        full_message += recv_message
+    
     return full_message
 
 def contains_end_of_message(message, end_sequence):
@@ -53,14 +88,16 @@ def parse_HTTP_message(http_message):
 
     return headers_dict, http_content
 
-def create_get_HTTP(site):
-    status_line = f'GET / HTTP/1.1'
-    headers = f'Host: {site}\r\nUser-Agent: {VM_IP}:{PORT}\r\nAccept: */*\r\nConnection: Keep-Alive\r\nX-ElQuePregunta: {proxy_name}'
+def create_get_HTTP(host, path):
+    status_line = f'GET {path} HTTP/1.1'
+    headers = f'Host: {host}\r\nUser-Agent: {VM_IP}:{PORT}\r\nAccept: */*\r\nConnection: Keep-Alive\r\nX-ElQuePregunta: {proxy_name}'
     full_request = status_line + "\r\n" + headers + "\r\n\r\n"
     return full_request
 
 def create_403_response():
     status_line = "HTTP/1.1 403 Forbidden"
+    with open("img/forbidden_cat.jpeg", "rb") as file:
+        img_base64 = base64.b64encode(file.read()).decode()
     body = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -69,7 +106,7 @@ def create_403_response():
 </head>
 <body>
     <h1>403 Forbidden</h1>
-    <img src="/img/forbidden_cat.jpeg" alt="Forbidden Cat">
+    <img src="data:image/jpeg;base64,{img_base64}" width="2000" alt="Forbidden Cat">
 </body>
 </html>
 """
@@ -95,9 +132,22 @@ def create_redacted_response(HTTP_response):
     full_response = status_line + "\r\n" + headers + "\r\n\r\n" + redacted_response
     return full_response
 
+def get_path_from_header(headers):
+    path = headers.get("Start-Line").split(" ")[1]
+    return path
+
+def get_host_from_header(headers):
+    host = headers.get("Host").replace(" ", "")
+    return host.replace(" ", "")
+
 def main():
     # Definir socket para conectar con el cliente
     proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # Para testing
+    proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    #####
+
     proxy_socket.bind(proxy_socket_address)
     proxy_socket.listen(3)
 
@@ -105,11 +155,12 @@ def main():
         # Conexión con el cliente
         client_socket, new_socket_address = proxy_socket.accept()
 
-        recv_message = receive_full_message(client_socket, buff_size, end_of_message)
+        recv_message = receive_full_message(client_socket, recv_buffer)
 
-        client_headers, client_body = parse_HTTP_message(recv_message)
+        client_headers, client_body = parse_HTTP_message(recv_message.decode())
+        server_host = get_host_from_header(client_headers)
+        server_path = get_path_from_header(client_headers)
 
-        site = (client_headers.get("Host", None)).replace(" ", "")
         response_message = None
 
         # Revisar si es sitio permitido
@@ -117,18 +168,19 @@ def main():
         with open("blocked.json") as file:
             data = json.load(file)
             for blocked_site in data.get("blocked"):
-                if blocked_site.replace("http://", "") == site:
+                if blocked_site == server_path:
                     block_site = True
                     break
 
         # Conexión con servidor
         if not block_site:
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_socket.connect((site.replace(" ", ""), PORT_SERVER))
 
-            server_socket.send(create_get_HTTP(site).encode())
+            server_socket.connect((server_host, PORT_SERVER))
+            
+            server_socket.send(create_get_HTTP(server_host, server_path).encode())
 
-            server_response = server_socket.recv(buff_size)
+            server_response = receive_full_message(server_socket, recv_buffer)
 
             server_socket.close()
 
