@@ -1,6 +1,7 @@
 import socket
 import json
 import base64
+import os
 
 VM_IP = '127.0.0.1'
 PORT = 8000
@@ -10,6 +11,10 @@ proxy_name = "Benjas"
 recv_buffer = 50
 end_of_message = "\n"
 proxy_socket_address = (VM_IP, PORT)
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+ruta_json = os.path.join(base_dir, "blocked.json")
+ruta_gato = os.path.join(base_dir, "img/forbidden_cat.jpeg")
 """
 def receive_full_message(connection_socket, recv_buffer, end_sequence):
     recv_message = connection_socket.recv(recv_buffer)
@@ -96,7 +101,7 @@ def create_get_HTTP(host, path):
 
 def create_403_response():
     status_line = "HTTP/1.1 403 Forbidden"
-    with open("img/forbidden_cat.jpeg", "rb") as file:
+    with open(ruta_gato, "rb") as file:
         img_base64 = base64.b64encode(file.read()).decode()
     body = f"""<!DOCTYPE html>
 <html lang="es">
@@ -122,7 +127,7 @@ def create_redacted_response(HTTP_response):
 
     status_line = "HTTP/1.1 200 OK"
     redacted_response = response_body
-    with open("blocked.json") as file:
+    with open("/blocked.json") as file:
         data = json.load(file)
         for forbidden_word in data.get("forbidden_words"):
             for word, replacement in forbidden_word.items():
@@ -165,7 +170,7 @@ def main():
 
         # Revisar si es sitio permitido
         block_site = False
-        with open("blocked.json") as file:
+        with open(ruta_json) as file:
             data = json.load(file)
             for blocked_site in data.get("blocked"):
                 if blocked_site == server_path:
