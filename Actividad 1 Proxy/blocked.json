@@ -1,0 +1,5 @@
+{ 
+  "user": "brillantes.benjas@dcc.uchile.cl",
+  "blocked": ["http://www.dcc.uchile.cl/", "http://cc4303.bachmann.cl/secret"],
+  "forbidden_words": [{"proxy": "[REDACTED]"}, {"DCC": "[FORBIDDEN]"}, {"biblioteca": "[???]"}]
+}     
