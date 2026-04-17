@@ -10,7 +10,7 @@ VM_IP = '127.0.0.1'
 PORT = 8000
 ROOT_DNS_IP = '192.33.4.12'
 DNS_PORT = 53
-DNS_BUFFER_SIZE = 65535
+DNS_BUFFER_SIZE = 66666
 DNS_TIMEOUT = 3.0
 
 # Caché: almacena respuestas DNS por dominio
@@ -169,6 +169,7 @@ def resolver(mensaje_consulta, visitados=None, debug=True):
 		additional_ip = extract_first_a_record(record.ar)
 		if additional_ip is not None:
 			servidor_actual = additional_ip
+			servidor_nombre = ns_name
 			continue
 
 		if ns_name in visitados:
@@ -201,7 +202,7 @@ def main():
 	print(f"Escuchando mensajes DNS UDP en {(VM_IP, PORT)}")
 
 	while True:
-		data, addr = sock.recvfrom(65535)
+		data, addr = sock.recvfrom(66666)
 		print(f"Recibido desde {addr}: {data}")
 		parsed = parse_dns_message(data)
 		pprint(parsed)
