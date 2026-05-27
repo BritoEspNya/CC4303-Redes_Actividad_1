@@ -1,0 +1,1 @@
+El estado actual confirma el problema: el servidor acumula todo y sale tras el primer periodo de inactividad. Lo cambio para que se quede en escucha permanente y vaya mostrando cada bloque recibido al vuelo.
