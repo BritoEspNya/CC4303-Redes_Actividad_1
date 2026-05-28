@@ -1,30 +1,30 @@
+import sys
+
 import SocketTCP
 
-MAX_PAYLOAD = 16
 
-
-def read_file_bytes():
-    path = input("Ruta del archivo: ").strip()
-    with open(path, "rb") as file:
-        return file.read()
-
-
-def iter_chunks(data, chunk_size=MAX_PAYLOAD):
-    for offset in range(0, len(data), chunk_size):
-        yield data[offset : offset + chunk_size]
-
-
-def run_client(host, port):
-    data = read_file_bytes()
+def run_client(host, port, debug=False):
+    data = sys.stdin.buffer.read()
     client_socket = SocketTCP.SocketTCP()
-    client_socket.connect((host, port))
-    sent = client_socket.send(data)
-    # opcional: imprimir bytes enviados
-    print(f"Enviados {sent} bytes")
+    client_socket.set_debug(debug)
+    try:
+        client_socket.connect((host, port))
+        client_socket.send(data)
+        client_socket.close()
+    except TimeoutError as exc:
+        print(f"Timeout de protocolo: {exc}", file=sys.stderr)
+        raise SystemExit(2)
 
 
 def main():
-    run_client("localhost", 8000)
+    if len(sys.argv) < 3:
+        print("Uso: python3 cliente.py <host> <port> [--debug]", file=sys.stderr)
+        raise SystemExit(1)
+
+    host = sys.argv[1]
+    port = int(sys.argv[2])
+    debug = "--debug" in sys.argv[3:]
+    run_client(host, port, debug=debug)
 
 
 if __name__ == "__main__":

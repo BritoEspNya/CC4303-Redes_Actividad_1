@@ -1,1 +1,6 @@
-El estado actual confirma el problema: el servidor acumula todo y sale tras el primer periodo de inactividad. Lo cambio para que se quede en escucha permanente y vaya mostrando cada bloque recibido al vuelo.
+El estado actual confirma el problema: el servidor acumula todo y sale tras el primer periodo de inactividad.
+Lo cambio para que se quede en escucha permanente y vaya mostrando cada bloque recibido al vuelo.
+Implemente Stop & Wait usando un timeout fijo definido por ustedes. Para ello aproveche la función settimeout de los sockets no orientados
+a conexión. Note que estos timeouts levantan errores al cumplirse el tiempo límite.
+su código debe manejar estos errores para saber cuándo debe retransmitir un segmento 
+(para ver cómo implementar un timeout vea Materiales e Indicaciones para la actividad). 
