@@ -1,3 +1,8 @@
+
+## Integrantes
+- Benjamín Brito
+- Benjamín Millar
+
 # `Stop and wait`
 
 Implementación de una capa tipo TCP sobre UDP para la actividad. El objetivo es soportar 3-way handshake, Stop & Wait, partición de mensajes en trozos de 16 bytes y cierre de conexión tolerante a pérdidas.
@@ -8,13 +13,13 @@ Implementación de una capa tipo TCP sobre UDP para la actividad. El objetivo es
 - `cliente.py`: cliente de prueba que lee desde `stdin` y envía el flujo completo.
 - `servidor.py`: servidor de prueba que recibe el flujo y lo escribe por `stdout`.
 - `split_recv_client.py` y `split_recv_server.py`: scripts de prueba para validar `recv(buff_size)` cuando el mensaje es mayor que `buff_size`.
-
+- `test_client.py` y `test_server.py`: scripts de prueba del EOL.
 ## 3-way handshake
 
 ```mermaid
-Dibujo Pedido parte 4
-     C es Cliente
-     S es Servidor
+sequenceDiagram
+    participant C as Cliente
+    participant S as Servidor
 
     C->>S: SYN (connect)
     S->>C: SYN-ACK (accept)
@@ -46,9 +51,9 @@ La lógica de envío y recepción se implementa sobre datagramas UDP, pero cada 
 ## Caso borde: último ACK del handshake perdido
 
 ```mermaid
-Dibujo Pedido parte 7
-     C es Cliente
-     S es Servidor
+sequenceDiagram
+    participant C as Cliente
+    participant S as Servidor
 
     C->>S: SYN
     S->>C: SYN-ACK
