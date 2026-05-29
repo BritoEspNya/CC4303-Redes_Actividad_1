@@ -1,4 +1,4 @@
-# `stopywait`
+# `Stop and wait`
 
 Implementación de una capa tipo TCP sobre UDP para la actividad. El objetivo es soportar 3-way handshake, Stop & Wait, partición de mensajes en trozos de 16 bytes y cierre de conexión tolerante a pérdidas.
 
@@ -12,9 +12,9 @@ Implementación de una capa tipo TCP sobre UDP para la actividad. El objetivo es
 ## 3-way handshake
 
 ```mermaid
-sequenceDiagram
-    participant C as Cliente
-    participant S as Servidor
+Dibujo Pedido parte 4
+     C es Cliente
+     S es Servidor
 
     C->>S: SYN (connect)
     S->>C: SYN-ACK (accept)
@@ -46,9 +46,9 @@ La lógica de envío y recepción se implementa sobre datagramas UDP, pero cada 
 ## Caso borde: último ACK del handshake perdido
 
 ```mermaid
-sequenceDiagram
-    participant C as Cliente
-    participant S as Servidor
+Dibujo Pedido parte 7
+     C es Cliente
+     S es Servidor
 
     C->>S: SYN
     S->>C: SYN-ACK
@@ -95,3 +95,31 @@ Se probó con `n = 17` para que no sea múltiplo de 16:
 ### 3. Modo debug
 
 Se ejecutaron cliente y servidor con `--debug` para revisar handshake, ACKs, retransmisiones y cierre.
+
+## Explicación de las funciones
+
+- `bind(address)`: configura y liga el socket UDP interno a `address`. Cambia `estado` a `LISTEN` y guarda `local_address`.
+
+- `connect(address)`: inicia el 3‑way handshake desde el cliente. Selecciona un `sequence_number` aleatorio (0..100), manda `SYN`, espera `SYN-ACK`, adapta `remote_address` al remitente real (soporta puertos efímeros) y responde con `ACK`. Al finalizar fija `estado = "ESTABLISHED"`.
+
+- `accept()`: espera `SYN` y crea un nuevo `SocketTCP` en un puerto efímero. Envía `SYN-ACK` y espera `ACK`. Si llegan datos antes del `ACK` final, guarda el datagrama en `_pending_datagram` y asume handshake implícito para evitar pérdida de datos.
+
+- `send(message)`: implementa Stop & Wait en el emisor. Envía primero un segmento con `message_length`, luego fragmenta en trozos lógicos de hasta 16 bytes y envía cada trozo esperando su ACK (usa `socket.settimeout` y retransmisiones). Los chunks se codifican en base64 para evitar colisiones con el formato de headers.
+
+- `recv(buff_size)`: implementa Stop & Wait en el receptor. Si se llama desde cero, primero recibe el segmento de longitud (`message_length`) y lo ACKea. Acumula fragmentos hasta `min(message_length, buff_size)` y retorna esos bytes; guarda cualquier sobrante para llamadas posteriores. Maneja reenvío del último ACK en timeouts para ayudar al emisor.
+
+- `close()`: cierre activo. Envía `FIN`, espera ACK de FIN (hasta 3 timeouts), luego espera `FIN` del peer; al recibirlo reenvía el ACK final 3 veces con pausas entre envíos y cierra.
+
+- `recv_close()`: cierre pasivo. Espera `FIN`, responde con ACK, envía su propio `FIN` y espera el ACK final (hasta 3 timeouts) antes de liberar recursos.
+
+## Por qué la clase principal está diseñada así
+
+- **Estado por conexión**: `SocketTCP` agrupa socket UDP, direcciones y estado (`sequence_number`, buffers, flags) para presentar una API orientada a conexión (`bind/connect/accept/send/recv/close`) sobre UDP. Esto facilita manejar múltiples conexiones (cada `accept()` retorna una nueva instancia ligada a un puerto efímero).
+
+- **Sencillez y claridad educativa**: se priorizó una implementación explícita y fácil de seguir (timeouts, retransmisiones, contadores) en lugar de optimizaciones complejas. Es adecuado para aprendizaje y para reproducir comportamientos del protocolo en laboratorio.
+
+- **Robustez práctica**: codificar los datos con base64 y usar ACKs repetidos reduce errores por colisión de formato y por pérdida moderada en el canal, a costa de mayor overhead on‑wire. `max_retries` y reenvíos múltiples equilibran resiliencia con liveness (evitan loops infinitos).
+
+- **Separación de dominios de secuencia**: usar `self.sequence_number` para el control y `data_seq` reiniciado por mensaje simplifica Stop & Wait por mensaje y evita ambigüedades al manejar retransmisiones y handshakes.
+
+
